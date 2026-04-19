@@ -1,0 +1,17 @@
+# .dockerignore untuk backend
+cat > backend/.dockerignore << 'EOF'
+node_modules
+dist
+.git
+*.log
+.env
+EOF
+
+# .dockerignore untuk frontend
+cat > frontend/.dockerignore << 'EOF'
+node_modules
+.next
+.git
+*.log
+.env
+EOF

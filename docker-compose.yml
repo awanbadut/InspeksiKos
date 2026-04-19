@@ -1,0 +1,67 @@
+name : inspeksikos
+
+services:
+  # ── PostgreSQL Database ──
+  postgres:
+    image:postgres: 17
+    container_name: inspeksikos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: inspeksikos_db
+      POSTGRES_USER: inspeksikos_user
+      POSTGRES_PASSWORD: inspeksikos_pass
+    Ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    helathcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  # ── Backend Database ──
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: deps
+    container_name: inspeksikos-backend
+    restart: unless-stopped
+    working_dir: /app
+    command: "npm run start:dev"
+    environment:
+      NODE_ENV:development
+      PORT: 5000
+      DATABASE_URL: postgres://inspeksikos_user:inspeksikos_pass@postgres:5432/inspeksikos_db
+    ports:
+      - "5000:5000"
+    depends_on: 
+      postgres:
+        condition: service_healthy
+
+  # ── Frontend Next.js ──
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: deps    
+    container_name: inspeksikos-frontend
+    restart: unless-stopped
+    working_dir: /app
+    command: npm run dev
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:5000/api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app         # Mount kode lokal → live reload
+      - /app/node_modules       # Jangan override node_modules container
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+    name: inspeksikos_postgres_data
